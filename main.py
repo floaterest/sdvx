@@ -1,3 +1,14 @@
+"""
+toc
+    id
+        javascript
+            title
+            yt url
+            author
+            illustrator
+        cover
+"""
+
 import requests
 from html.parser import HTMLParser
 
