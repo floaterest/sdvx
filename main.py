@@ -11,8 +11,10 @@ toc
         cover
 """
 
+import os
 import requests
 from html.parser import HTMLParser
+from urllib import request
 
 
 class ToCParser(HTMLParser):
@@ -46,4 +48,14 @@ class SDVX:
         content = requests.get(self.url + f'/sort/sort_{sort}.htm').content.decode('utf8')
         toc.feed(content)
         return toc.songs
+
+    def download_cover(self, song_id: str, path=''):
+        """
+        Download the cover of the song, filename will be {song_id}.png
+        :param song_id: id of the song, e.g. '05238'
+        :param path: destination folder
+        """
+        request.urlretrieve(
+            self.url + f'/{song_id[:2]}/jacket/{song_id}n.png',
+            os.path.join(path, song_id + '.png'))
 
