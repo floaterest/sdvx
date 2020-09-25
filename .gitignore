@@ -1,3 +1,9 @@
+# pycharm
+.idea/
+
+# test files
+t[0-9].py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
