@@ -3,8 +3,10 @@ toc
     id
         javascript
             title
+            feat
+            bpm
             yt url
-            author
+            composer
             illustrator
         cover
 """
@@ -31,11 +33,17 @@ class ToCParser(HTMLParser):
                     break
 
 
-url = 'https://sdvx.in'
-hiraganas = ['a', 'k', 's', 't', 'h', 'n', 'h', 'm', 'y', 'r', 'w']
-toc = ToCParser()
+class SDVX:
+    def __init__(self, url='https://sdvx.in'):
+        self.url = url
 
-for hiragana in hiraganas:
-    content = requests.get(url + f'/sort/sort_{hiragana}.htm').content.decode('utf8')
-    toc.feed(content)
-    print(toc.songs)
+    def parse_toc(self, sort: str) -> list:
+        """
+        :param sort: hiragana (a, k, s, t, h, etc)
+        :return: list of found ids
+        """
+        toc = ToCParser()
+        content = requests.get(self.url + f'/sort/sort_{sort}.htm').content.decode('utf8')
+        toc.feed(content)
+        return toc.songs
+
