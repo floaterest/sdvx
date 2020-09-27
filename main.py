@@ -10,11 +10,35 @@ toc
             illustrator
         cover
 """
-
 import os
 import requests
 from html.parser import HTMLParser
 from urllib import request
+
+
+class JSParser:
+    @staticmethod
+    def get_title(line: str):
+        return line[10:]
+
+    @staticmethod
+    def get_artist(line: str):
+        return line[34:-8]
+
+    @staticmethod
+    def get_bpm(line: str):
+        # no regex
+        end = len(line) - 1
+        while not line[end].isdigit():
+            end -= 1
+        begin = (end := end + 1) - 2
+        while (c := line[begin]).isdigit() or c == '-':
+            begin -= 1
+        return line[begin + 1:end]
+
+    @staticmethod
+    def get_yt(line: str):
+        return line[79:90]
 
 
 class ToCParser(HTMLParser):
@@ -45,7 +69,8 @@ class SDVX:
         :return: list of found ids
         """
         toc = ToCParser()
-        content = requests.get(self.url + f'/sort/sort_{sort}.htm').content.decode('utf8')
+        content = requests.get(self.url + f'/sort/sort_{sort}.htm') \
+            .content.decode('utf8')
         toc.feed(content)
         return toc.songs
 
@@ -59,3 +84,25 @@ class SDVX:
             self.url + f'/{song_id[:2]}/jacket/{song_id}n.png',
             os.path.join(path, song_id + '.png'))
 
+    def parse_javascript(self, song_id: str):
+        """
+
+        :param song_id: id of the song, e.g. '04265'
+        :return:
+        """
+        lines = requests.get(self.url + f'/{song_id[:2]}/js/{song_id}sort.js') \
+            .content.decode('utf8') \
+            .split('\n')
+        # line position is fixed (thank you dev)
+        commands = [
+            [0, JSParser.get_title],
+            [2, JSParser.get_artist],
+            [3, JSParser.get_bpm],
+            [18, JSParser.get_yt]
+        ]
+        for i, cmd in commands:
+            print(cmd(lines[i]))
+
+
+s = SDVX()
+s.parse_javascript('05153')
