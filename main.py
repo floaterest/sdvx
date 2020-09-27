@@ -15,6 +15,8 @@ from html.parser import HTMLParser
 from urllib import request
 
 import requests
+import youtube_dl
+
 
 class ToCParser(HTMLParser):
     def __init__(self):
@@ -99,3 +101,11 @@ class Song:
             begin -= 1
         return line[begin + 1:end]
 
+    def download_from_yt(self):
+        opt = {
+            'format': 'bestaudio/best',
+            'outtmpl': f'[{self.song_id}][{self.ytid}].mp3'
+        }
+        with youtube_dl.YoutubeDL(opt) as ydl:
+            ydl.download([f'https://youtu.be/{self.ytid}'])
+        print('done')
