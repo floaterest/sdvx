@@ -93,13 +93,16 @@ class Song:
     def download_from_yt(self) -> str:
         if self.ytid:
             opt = {
-                'format': 'bestaudio/best',
-                'outtmpl': (filename := f'[{self.song_id}][{self.ytid}].mp3')
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'outtmpl': (filename := f'[{self.song_id}][{self.ytid}]')
             }
             with youtube_dl.YoutubeDL(opt) as ydl:
                 ydl.download([f'https://youtu.be/{self.ytid}'])
 
-            return filename
+            return filename + '.mp3'
         else:
             raise Exception('This song is unavailable on YouTube')
-
