@@ -4,6 +4,7 @@ from urllib import request
 
 import requests
 import youtube_dl
+from mutagen.easyid3 import EasyID3
 
 
 class ToCParser(HTMLParser):
@@ -90,11 +91,15 @@ class Song:
         return line[begin + 1:end]
 
     def download_from_yt(self) -> str:
-        opt = {
-            'format': 'bestaudio/best',
-            'outtmpl': filename := f'[{self.song_id}][{self.ytid}].mp3'
-        }
-        with youtube_dl.YoutubeDL(opt) as ydl:
-            ydl.download([f'https://youtu.be/{self.ytid}'])
+        if self.ytid:
+            opt = {
+                'format': 'bestaudio/best',
+                'outtmpl': (filename := f'[{self.song_id}][{self.ytid}].mp3')
+            }
+            with youtube_dl.YoutubeDL(opt) as ydl:
+                ydl.download([f'https://youtu.be/{self.ytid}'])
 
-        return filename
+            return filename
+        else:
+            raise Exception('This song is unavailable on YouTube')
+
