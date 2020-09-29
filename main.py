@@ -1,15 +1,3 @@
-"""
-toc
-    id
-        javascript
-            title
-            feat
-            bpm
-            yt url
-            composer
-            illustrator
-        cover
-"""
 import os
 from html.parser import HTMLParser
 from urllib import request
