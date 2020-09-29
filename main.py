@@ -101,7 +101,7 @@ class Song:
             begin -= 1
         return line[begin + 1:end]
 
-    def download_from_yt(self):
+    def download_from_yt(self) -> str:
         opt = {
             'format': 'bestaudio/best',
             'outtmpl': filename := f'[{self.song_id}][{self.ytid}].mp3'
