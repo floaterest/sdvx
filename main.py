@@ -67,6 +67,7 @@ class Song:
         self.title = js[0][10:]
         self.composer, self.feat = self.get_artists(js[2])
         self.bpm = self.get_bpm(js[3])
+        # may be empty string
         self.ytid = js[18][79:90]
 
     @staticmethod
@@ -90,7 +91,7 @@ class Song:
             begin -= 1
         return line[begin + 1:end]
 
-    def download_from_yt(self) -> str:
+    def download_mp3(self) -> str:
         if self.ytid:
             opt = {
                 'postprocessors': [{
@@ -105,4 +106,7 @@ class Song:
 
             return filename + '.mp3'
         else:
-            raise Exception('This song is unavailable on YouTube')
+            raise Exception('This song is not available on YouTube')
+
+
+
