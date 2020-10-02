@@ -55,9 +55,12 @@ class Song:
     def __init__(self, js: list, url='https://sdvx.in'):
         self.url = url
         self.song_id = js[0][4:9]
-        self.title = js[0][10:]
-        self.composer, self.feat = self.get_artists(js[2])
-        self.bpm = self.get_bpm(js[3])
+        self.id3 = {
+            'title': js[0][10:],
+            'bpm': self.get_bpm(js[3]),
+        }
+
+        self.id3['composer'], self.id3['artist'] = self.get_artists(js[2])
         # may be empty string
         self.ytid = js[18][79:90]
 
@@ -103,3 +106,10 @@ class Song:
         request.urlretrieve(
             self.url + f'/{self.song_id[:2]}/jacket/{self.song_id}n.png',
             self.song_id + '.png')
+
+    def add_tags(self, file):
+        # put id3 tags
+        file = EasyID3(file)
+        for tag, value in self.id3.items():
+            file[tag] = value
+        file.save()
