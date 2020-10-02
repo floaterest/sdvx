@@ -40,16 +40,6 @@ class SDVX:
         toc.feed(content)
         return toc.songs
 
-    def download_cover(self, song_id: str, path=''):
-        """
-        Download the cover of the song, filename will be {song_id}.png
-        :param song_id: id of the song, e.g. '05238'
-        :param path: destination folder
-        """
-        request.urlretrieve(
-            self.url + f'/{song_id[:2]}/jacket/{song_id}n.png',
-            os.path.join(path, song_id + '.png'))
-
     def get_javascript(self, song_id: str) -> list:
         """
 
@@ -62,7 +52,8 @@ class SDVX:
 
 
 class Song:
-    def __init__(self, js: list):
+    def __init__(self, js: list, url='https://sdvx.in'):
+        self.url = url
         self.song_id = js[0][4:9]
         self.title = js[0][10:]
         self.composer, self.feat = self.get_artists(js[2])
@@ -108,5 +99,7 @@ class Song:
         else:
             raise Exception('This song is not available on YouTube')
 
-
-
+    def download_cover(self):
+        request.urlretrieve(
+            self.url + f'/{self.song_id[:2]}/jacket/{self.song_id}n.png',
+            self.song_id + '.png')
