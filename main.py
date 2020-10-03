@@ -27,10 +27,12 @@ class ToCParser(HTMLParser):
 class SDVX:
     def __init__(self, url='https://sdvx.in'):
         self.url = url
+        self.hiraganas = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w']
 
-    def parse_toc(self, sort: str) -> list:
+    def get_ids_from_toc(self, sort: str) -> list:
         """
-        :param sort: hiragana (a, k, s, t, h, etc)
+        Parse song ids from sort.htm
+        :param sort: hiragana ('a', 'k', 's', 't', 'h', etc)
         :return: list of found ids
         """
         toc = ToCParser()
@@ -39,19 +41,19 @@ class SDVX:
         toc.feed(content)
         return toc.songs
 
-    def get_javascript(self, song_id: str) -> list:
+    def get_song_from_id(self, song_id: str):
         """
-
+        Parse song data from javascript file
         :param song_id: id of the song, e.g. '04265'
         :return:
         """
-        return requests.get(self.url + f'/{song_id[:2]}/js/{song_id}sort.js') \
-            .content.decode('utf8') \
-            .split('\n')
+        return Song(requests.get(self.url + f'/{song_id[:2]}/js/{song_id}sort.js') \
+                    .content.decode('utf8') \
+                    .split('\n'), self.url)
 
 
 class Song:
-    def __init__(self, js: list, url='https://sdvx.in'):
+    def __init__(self, js: list, url):
         self.url = url
         self.song_id = js[0][4:9]
         self.id3 = {
@@ -110,5 +112,6 @@ class Song:
         # put id3 tags
         file = EasyID3(file)
         for tag, value in self.id3.items():
-            file[tag] = value
+            if value:
+                file[tag] = value
         file.save()
