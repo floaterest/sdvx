@@ -29,7 +29,7 @@ class SDVX:
         self.url = url
         self.hiraganas = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w']
 
-    def get_ids_from_toc(self, sort: str) -> list:
+    def toc_to_ids(self, sort: str) -> list:
         """
         Parse song ids from sort.htm
         :param sort: hiragana ('a', 'k', 's', 't', 'h', etc)
@@ -41,15 +41,13 @@ class SDVX:
         toc.feed(content)
         return toc.songs
 
-    def get_song_from_id(self, song_id: str):
+    def download_js(self, song_id: str, path=None):
         """
-        Parse song data from javascript file
-        :param song_id: id of the song, e.g. '04265'
-        :return:
+        Download the sort.js file for the song
         """
-        return Song(requests.get(self.url + f'/{song_id[:2]}/js/{song_id}sort.js') \
-                    .content.decode('utf8') \
-                    .split('\n'), self.url)
+        path = path or song_id
+        path = path if path.endswith('.js') else path + '.js'
+        request.urlretrieve(f'{self.url}/{song_id[:2]}/js/{song_id}sort.js', path)
 
 
 class Song:
