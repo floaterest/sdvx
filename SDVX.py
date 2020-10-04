@@ -1,6 +1,6 @@
 from html.parser import HTMLParser
 from urllib import request
-import html
+from html import unescape
 
 import requests
 import youtube_dl
@@ -23,6 +23,40 @@ class ToCParser(HTMLParser):
                     # e.g. '/05/js/05174sort.js' => '05174'
                     self.songs.append(value[7:12])
                     break
+
+
+class ID3Parser(HTMLParser):
+    def __init__(self, expect_tag: str, expect_classes: list = None, attr: str = None):
+        super().__init__()
+        self.data = ''
+        self.tag = expect_tag
+        self.classes = expect_classes or []
+        self.parse = False
+        self.attr = attr
+
+    def error(self, message):
+        print('error', message)
+
+    def handle_starttag(self, tag, attrs):
+        # check if it's wanted element
+        self.parse = tag == self.tag
+        if len(self.classes):
+            for attr, value in attrs:
+                if attr == 'class' and value not in self.classes:
+                    return
+            else:
+                # wanted class
+                # if want attr but not data
+                self.parse = not self.attr
+                if self.attr:
+                    for attr, value in attrs:
+                        if attr == self.attr:
+                            self.data = value
+                            break
+
+    def handle_data(self, data):
+        if self.parse:
+            self.data = data
 
 
 class SDVX:
@@ -52,60 +86,49 @@ class SDVX:
 
 
 class Song:
-    def __init__(self, js: str):
-        lines = [html.unescape(l).strip() for l in js]
-        self.song = lines[0][3:8]
-        self.id3 = {
-            'title': lines[0][9:],
-            'bpm': self.get_bpm(lines[3]),
+    def __init__(self, javascript: list):
+        lines = [unescape(l).strip() for l in javascript]
+        p = {
+            'TI': self.title,
+            'AR': self.artists,
+            'BP': self.bpm,
+            'SD': self.youtube
         }
-
-        self.id3['composer'], self.id3['artist'] = self.get_artists(lines[2])
-        # may be empty string
-        self.yt = self.get_yt(lines[14:])
-
-    @staticmethod
-    def get_artists(line: str) -> (str, str):
-        """
-        Parse composer and artist
-        :param line: line of code in javascript
-        :return: composer, feat(can be None)
-        """
-        # composer
-        line = line[34:-8]
-        try:
-            i = line.index('feat.')
-            # -1 because space
-            return line[:i - 1], line[i:]
-        except ValueError:
-            return line, None
-
-    @staticmethod
-    def get_bpm(line: str):
-        # no regex
-        end = len(line) - 1
-        while not line[end].isdigit():
-            end -= 1
-
-        begin = (end := end + 1) - 2
-        while (c := line[begin]).isdigit() or c == '-':
-            begin -= 1
-        # if the next char is not a digit, bpm DNE
-        return line[begin + 1:end] if line[begin + 2].isdigit() else 'n/a'
-
-    @staticmethod
-    def get_yt(lines: list):
-        """
-        Get YouTube ID, won't raise error if it's empty
-        :param lines:
-        :return:
-        """
+        self.song = lines[3][7:12]
+        self.yt = ''
+        self.id3 = {}
+        # assign id3
         for l in lines:
-            # the line position of yt url varies
-            if l.startswith('var SD'):
-                return l[79:90]
-        # raise error when html tag not found (can't find the right line in js)
-        raise Exception("can't find youtube url")
+            if l.startswith('var'):
+                if l[4:6] in p:
+                    p[l[4:6]](l[l.index('=') + 2:-2])
+            elif l.startswith('function'):
+                break
+
+    @staticmethod
+    def parse(html: str, tag: str = None, classes: list = None, attr: str = None):
+        parser = ID3Parser(tag, classes, attr)
+        parser.feed(html)
+        return parser.data
+
+    def title(self, html: str):
+        self.id3['title'] = self.parse(html, 'div')
+
+    def artists(self, html: str) -> (str, str):
+        # composer
+        composer = self.parse(html, 'div')[3:]
+        try:
+            i = composer.index('feat.')
+            # -1 because space
+            self.id3['composer'], self.id3['artist'] = composer[:i - 1], composer[i:]
+        except ValueError:
+            self.id3['composer'], self.id3['artist'] = composer, None
+
+    def bpm(self, html: str):
+        self.id3['bpm'] = self.parse(html, classes=['f1', 'bpm'])
+
+    def youtube(self, html: str):
+        self.yt = self.parse(html, 'a', attr='href')[32:] or None
 
     def download_mp3(self, filename: str):
         if self.yt:
