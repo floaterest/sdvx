@@ -112,7 +112,9 @@ class Song:
         return parser.data
 
     def title(self, html: str):
-        self.id3['title'] = self.parse(html, 'div')
+        start = html.index('>', 1) + 1
+        end = html.index('<', start)
+        self.id3['title'] = html[start:end]
 
     def artists(self, html: str) -> (str, str):
         # composer
