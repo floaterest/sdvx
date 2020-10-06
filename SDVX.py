@@ -125,7 +125,11 @@ class Song:
             self.id3['composer'], self.id3['artist'] = composer, None
 
     def bpm(self, html: str):
-        self.id3['bpm'] = self.parse(html, classes=['f1', 'bpm'])
+        for char in (bpm := self.parse(html, classes=['f1', 'bpm'])):
+            if not char.isdigit() and char != '-':
+                bpm = None
+                break
+        self.id3['bpm'] = bpm
 
     def youtube(self, html: str):
         self.yt = self.parse(html, 'a', attr='href')[32:] or None
@@ -142,7 +146,6 @@ class Song:
             }
             with youtube_dl.YoutubeDL(opt) as ydl:
                 ydl.download([f'https://youtu.be/{self.yt}'])
-
         else:
             raise Exception('This song is not available on YouTube')
 
