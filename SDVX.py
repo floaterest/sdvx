@@ -42,17 +42,17 @@ class ID3Parser(HTMLParser):
         self.parse = tag == self.tag
         if len(self.classes):
             for attr, value in attrs:
-                if attr == 'class' and value not in self.classes:
-                    return
-            else:
-                # wanted class
-                # if want attr but not data
-                self.parse = not self.attr
-                if self.attr:
-                    for attr, value in attrs:
-                        if attr == self.attr:
-                            self.data = value
-                            break
+                if attr == 'class':
+                    # if wanted class
+                    self.parse = self.parse or value in self.classes
+
+        # if want attr but not data
+        if self.parse and self.attr:
+            for attr, value in attrs:
+                if attr == self.attr:
+                    self.data = value
+                    self.parse = False
+                    break
 
     def handle_data(self, data):
         if self.parse:
