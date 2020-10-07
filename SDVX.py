@@ -151,11 +151,6 @@ class Song:
         else:
             raise Exception('This song is not available on YouTube')
 
-    # def download_cover(self):
-    #     request.urlretrieve(
-    #         self.url + f'/{self.song_id[:2]}/jacket/{self.song_id}n.png',
-    #         self.song_id + '.png')
-
     def add_tags(self, file):
         # put id3 tags
         file = EasyID3(file)
