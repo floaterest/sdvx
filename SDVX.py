@@ -137,6 +137,11 @@ class Song:
         self.yt = self.parse(html, 'a', attr='href')[32:] or None
 
     def download_mp3(self, filename: str):
+        """
+
+        :param filename: please include .mp3 as ext
+        :return: true if download was sucessful
+        """
         if self.yt:
             opt = {
                 'postprocessors': [{
@@ -146,8 +151,12 @@ class Song:
                 }],
                 'outtmpl': filename.replace('.mp3', '')
             }
-            with youtube_dl.YoutubeDL(opt) as ydl:
-                ydl.download([f'https://youtu.be/{self.yt}'])
+            try:
+                with youtube_dl.YoutubeDL(opt) as ydl:
+                    ydl.download([f'https://youtu.be/{self.yt}'])
+                return True
+            except:
+                return False
         else:
             raise Exception('This song is not available on YouTube')
 
