@@ -136,7 +136,7 @@ class Song:
     def youtube(self, html: str):
         self.yt = self.parse(html, 'a', attr='href')[32:] or None
 
-    def download_mp3(self, filename: str):
+    def download_mp3(self, filename: str) -> bool:
         """
 
         :param filename: please include .mp3 as ext
