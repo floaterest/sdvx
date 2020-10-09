@@ -114,7 +114,7 @@ class Song:
     def title(self, html: str):
         start = html.index('>', 1) + 1
         end = html.index('<', start)
-        self.id3['title'] = html[start:end]
+        self.id3['title'] = html[start:end].strip()
 
     def artists(self, html: str) -> (str, str):
         # composer
