@@ -1,117 +1,72 @@
-from html.parser import HTMLParser
+import json
+import os
 from urllib import request
+from datetime import datetime
+from codecs import open
+from time import time
 
-import requests
-import youtube_dl
-from mutagen.easyid3 import EasyID3
-
-
-class ToCParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.songs = []
-
-    def error(self, message):
-        print('error', message)
-
-    def handle_starttag(self, tag, attrs):
-        if tag == 'script':
-            for attr, value in attrs:
-                if attr == 'src' and 'common' not in value:
-                    # get all the js path, don't want '/files/common.js'
-                    # e.g. '/05/js/05174sort.js' => '05174'
-                    self.songs.append(value[7:12])
-                    break
+from SDVX import SDVX, Song
 
 
-class SDVX:
-    def __init__(self, url='https://sdvx.in'):
-        self.url = url
-        self.hiraganas = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w']
-
-    def get_ids_from_toc(self, sort: str) -> list:
-        """
-        Parse song ids from sort.htm
-        :param sort: hiragana ('a', 'k', 's', 't', 'h', etc)
-        :return: list of found ids
-        """
-        toc = ToCParser()
-        content = requests.get(self.url + f'/sort/sort_{sort}.htm') \
-            .content.decode('utf8')
-        toc.feed(content)
-        return toc.songs
-
-    def get_song_from_id(self, song_id: str):
-        """
-        Parse song data from javascript file
-        :param song_id: id of the song, e.g. '04265'
-        :return:
-        """
-        return Song(requests.get(self.url + f'/{song_id[:2]}/js/{song_id}sort.js') \
-                    .content.decode('utf8') \
-                    .split('\n'), self.url)
+def write(i, date, yt, sucess):
+    with open('!.txt', 'a+') as f:
+        f.write(f'{i} {date} '
+                f'{yt if yt else "___________"} '
+                f'{"true" if sucess else "false"}\n')
 
 
-class Song:
-    def __init__(self, js: list, url):
-        self.url = url
-        self.song_id = js[0][4:9]
-        self.id3 = {
-            'title': js[0][10:],
-            'bpm': self.get_bpm(js[3]),
-        }
+exists = {f[:5]: f for f in os.listdir() if f.endswith('.mp3')}
+sdvx = SDVX()
 
-        self.id3['composer'], self.id3['artist'] = self.get_artists(js[2])
-        # may be empty string
-        self.ytid = js[18][79:90]
 
-    @staticmethod
-    def get_artists(line: str) -> (str, str):
-        line = line[34:-8]
-        try:
-            i = line.index('feat.')
-            # -1 b/c space
-            return line[:i - 1], line[i:]
-        except ValueError:
-            return line, None
+def get_all_ids(output):
+    # write all sdvx song ids in a file
+    with open(output, 'w+', 'utf8sig') as f:
+        for sort in sdvx.hiraganas:
+            print('searching', sort)
+            for song in sdvx.toc_to_ids(sort):
+                f.write(song)
+                f.write('\n')
 
-    @staticmethod
-    def get_bpm(line: str):
-        # no regex
-        end = len(line) - 1
-        while not line[end].isdigit():
-            end -= 1
-        begin = (end := end + 1) - 2
-        while (c := line[begin]).isdigit() or c == '-':
-            begin -= 1
-        return line[begin + 1:end]
 
-    def download_mp3(self) -> str:
-        if self.ytid:
-            opt = {
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-                'outtmpl': (filename := f'[{self.song_id}][{self.ytid}]')
-            }
-            with youtube_dl.YoutubeDL(opt) as ydl:
-                ydl.download([f'https://youtu.be/{self.ytid}'])
+def download_all_js(id_file):
+    with open(id_file, 'r') as f:
+        while line := f.readline():
+            line = line[:-1]
+            print(line)
+            request.urlretrieve(f'https://sdvx.in/{line[:2]}/js/{line}sort.js', f'js\\{line}.js')
 
-            return filename + '.mp3'
-        else:
-            raise Exception('This song is not available on YouTube')
 
-    def download_cover(self):
-        request.urlretrieve(
-            self.url + f'/{self.song_id[:2]}/jacket/{self.song_id}n.png',
-            self.song_id + '.png')
+def update_all(folder):
+    data = {}
+    for js in os.listdir(folder):
+        if js.startswith('05'):
+            continue
+        with open(os.path.join(folder, js), 'r', 'utf-8-sig', errors='ignore') as f:
+            s = Song(f.readlines())
+            sucess = bool(s.yt)
+            # if don't exist
+            if s.song not in exists:
+                if s.yt:
+                    sucess = s.download_mp3(filename := f'{s.song}@{s.yt}.mp3')
+            else:
+                print(s.song, 'exists')
+                filename = exists[s.song]
 
-    def add_tags(self, file):
-        # put id3 tags
-        file = EasyID3(file)
-        for tag, value in self.id3.items():
-            if value:
-                file[tag] = value
-        file.save()
+            if sucess and int(s.song) > 1129:
+                s.add_tags(filename)
+
+            s.id3.update({
+                'youtube': s.yt,
+                'sucess': sucess,
+                'date': int(datetime.now().strftime('%Y%m%d')),
+            })
+            data[s.song] = s.id3
+
+        with open('sucess.json', 'w+', 'utf8') as f:
+            f.write(json.dumps(data, ensure_ascii=False, indent=4))
+
+
+t = time()
+update_all('js')
+print(time() - t)
